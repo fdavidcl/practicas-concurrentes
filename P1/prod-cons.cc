@@ -22,7 +22,7 @@ void consumir_dato(int dato)                                {
 // Procedimiento para la hebra productora
 void * productor(void *)                                    {
   for (unsigned i = 0; i < num_items; i++)                  {
-    if (buffer.size() == 10)
+    if (buffer.size() == 2)
       sem_wait(&no_lleno)                                   ;
     
     sem_wait(&critical)                                     ;
@@ -40,12 +40,14 @@ void * consumidor(void *)                                   {
     sem_wait(&no_vacio)                                     ;
     
     sem_wait(&critical)                                     ;
+    int prev_size = buffer.size()                           ;
     int dato = buffer.back()                                ;
     buffer.pop_back()                                       ;
     consumir_dato(dato)                                     ;
     sem_post(&critical)                                     ;
     
-    sem_post(&no_lleno)                                     ;
+    if (prev_size == 2)
+      sem_post(&no_lleno)                                   ;
                                                             }
   return NULL                                               ;
                                                             }
@@ -54,6 +56,8 @@ int main(int argc, char * argv[])                           {
   pthread_t hebra1, hebra2                                  ;
 
   sem_init(&no_vacio, 0, 0)                                 ;
+  sem_init(&no_lleno, 0, 0)                                 ;
+  sem_init(&critical, 0, 1)                                 ;
   
   pthread_create(&hebra1, NULL, productor, NULL)            ;
   pthread_create(&hebra2, NULL, consumidor, NULL)           ;

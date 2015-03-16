@@ -8,46 +8,46 @@ using namespace std                                         ;
 // Variables globales
 static unsigned num_items = 50                              ;
 vector<int> buffer                                          ;
-sem_t no_vacio                                              ;
-sem_t no_lleno                                              ;
+sem_t lecturas                                              ;
+sem_t espacio                                               ;
 sem_t critical                                              ;
+sem_t salida                                                ;
 
 int producir_dato()                                         {
   static int contador = 1                                   ;
   return contador++                                         ;
                                                             }
 void consumir_dato(int dato)                                {
+  sem_wait(&salida)                                         ;
   cout << "Dato recibido: " << dato << endl                 ;
+  sem_post(&salida)                                         ;
                                                             }
 // Procedimiento para la hebra productora
 void * productor(void *)                                    {
   for (unsigned i = 0; i < num_items; i++)                  {
-    if (buffer.size() == 2)
-      sem_wait(&no_lleno)                                   ;
+    int dato = producir_dato()                              ;
+    sem_wait(&espacio)                                      ;
     
     sem_wait(&critical)                                     ;
-    int dato = producir_dato()                              ;
     buffer.push_back(dato)                                  ;
     sem_post(&critical)                                     ;
     
-    sem_post(&no_vacio)                                     ;
+    sem_post(&lecturas)                                     ;
                                                             }
   return NULL                                               ;
                                                             }
 // Procedimiento para la hebra consumidora
 void * consumidor(void *)                                   {
   for (unsigned i = 0; i < num_items; i++)                  {
-    sem_wait(&no_vacio)                                     ;
+    sem_wait(&lecturas)                                     ;
     
     sem_wait(&critical)                                     ;
-    int prev_size = buffer.size()                           ;
     int dato = buffer.back()                                ;
     buffer.pop_back()                                       ;
-    consumir_dato(dato)                                     ;
     sem_post(&critical)                                     ;
+    sem_post(&espacio)                                      ;
     
-    if (prev_size == 2)
-      sem_post(&no_lleno)                                   ;
+    consumir_dato(dato)                                     ;
                                                             }
   return NULL                                               ;
                                                             }
@@ -55,14 +55,20 @@ void * consumidor(void *)                                   {
 int main(int argc, char * argv[])                           {
   pthread_t hebra1, hebra2                                  ;
 
-  sem_init(&no_vacio, 0, 0)                                 ;
-  sem_init(&no_lleno, 0, 0)                                 ;
+  int tam_vector = 2                                        ;
+  
+  sem_init(&lecturas, 0, 0)                                 ;
+  sem_init(&espacio, 0, tam_vector)                         ;
   sem_init(&critical, 0, 1)                                 ;
+  sem_init(&salida, 0, 1)                                   ;
   
   pthread_create(&hebra1, NULL, productor, NULL)            ;
   pthread_create(&hebra2, NULL, consumidor, NULL)           ;
 
   pthread_join(hebra1, NULL)                                ;
   pthread_join(hebra2, NULL)                                ;
+  
+  cout << "fin" << endl                                     ;
+  
   return 0                                                  ;
                                                             }

@@ -7,7 +7,10 @@ using namespace std                                         ;
 
 // Variables globales
 static unsigned num_items = 50                              ;
-vector<int> buffer                                          ;
+const int tam_vector = 10                                   ;
+int p_ocupada = 0                                           ;
+int p_libre = 0                                             ;
+int buffer[tam_vector]                                      ;
 sem_t lecturas                                              ;
 sem_t espacio                                               ;
 sem_t critical                                              ;
@@ -21,17 +24,23 @@ void consumir_dato(int dato)                                {
   sem_wait(&salida)                                         ;
   cout << "Dato recibido: " << dato << endl                 ;
   sem_post(&salida)                                         ;
-                                                            }
-// Procedimiento para la hebra productora
+                                                            }/*
+Procedimiento para la hebra productora                      */
 void * productor(void *)                                    {
   for (unsigned i = 0; i < num_items; i++)                  {
-    int dato = producir_dato()                              ;
+    int dato = producir_dato()                              ;/*
+    
+    Mientras haya espacio, podemos escribir
+    nuevos datos en el buffer                               */
     sem_wait(&espacio)                                      ;
+    sem_wait(&critical)                                     ;/*
     
-    sem_wait(&critical)                                     ;
-    buffer.push_back(dato)                                  ;
-    sem_post(&critical)                                     ;
+    Colocamos el dato en la próxima posición libre          */
+    buffer[p_libre] = dato                                  ;
+    p_libre = (p_libre + 1) % tam_vector                    ;
+    sem_post(&critical)                                     ;/*
     
+    Notificamos una nueva lectura pendiente                 */    
     sem_post(&lecturas)                                     ;
                                                             }
   return NULL                                               ;
@@ -42,8 +51,8 @@ void * consumidor(void *)                                   {
     sem_wait(&lecturas)                                     ;
     
     sem_wait(&critical)                                     ;
-    int dato = buffer.back()                                ;
-    buffer.pop_back()                                       ;
+    int dato = buffer[p_ocupada]                            ;
+    p_ocupada = (p_ocupada + 1) % tam_vector                ;
     sem_post(&critical)                                     ;
     sem_post(&espacio)                                      ;
     
@@ -54,8 +63,6 @@ void * consumidor(void *)                                   {
 
 int main(int argc, char * argv[])                           {
   pthread_t hebra1, hebra2                                  ;
-
-  int tam_vector = 10                                       ;
   
   sem_init(&lecturas, 0, 0)                                 ;
   sem_init(&espacio, 0, tam_vector)                         ;

@@ -7,6 +7,8 @@ using namespace std                                         ;
 
 // Variables globales
 static unsigned num_items = 50                              ;
+const int tam_vector = 10                                   ;
+int ocupacion = 0                                           ;
 vector<int> buffer                                          ;
 sem_t lecturas                                              ;
 sem_t espacio                                               ;
@@ -30,6 +32,7 @@ void * productor(void *)                                    {
     
     sem_wait(&critical)                                     ;
     buffer.push_back(dato)                                  ;
+    ocupacion++                                             ;
     sem_post(&critical)                                     ;
     
     sem_post(&lecturas)                                     ;
@@ -44,6 +47,7 @@ void * consumidor(void *)                                   {
     sem_wait(&critical)                                     ;
     int dato = buffer.back()                                ;
     buffer.pop_back()                                       ;
+    ocupacion--                                             ;
     sem_post(&critical)                                     ;
     sem_post(&espacio)                                      ;
     
@@ -55,7 +59,7 @@ void * consumidor(void *)                                   {
 int main(int argc, char * argv[])                           {
   pthread_t hebra1, hebra2                                  ;
 
-  int tam_vector = 10                                       ;
+  buffer.resize(tam_vector)                                 ;
   
   sem_init(&lecturas, 0, 0)                                 ;
   sem_init(&espacio, 0, tam_vector)                         ;

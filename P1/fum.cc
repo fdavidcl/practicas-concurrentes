@@ -34,7 +34,8 @@ void fumar()                                                                {/*
                                                                             }
 
 void * fumador(void * faltante)                                             {
-Ingrediente f = (Ingrediente)(long int)faltante                             ;
+  Ingrediente f = (Ingrediente)(long int)faltante                           ;
+  
   while (true)                                                              {
     sem_wait(&sem_ingr[f])                                                  ;
     

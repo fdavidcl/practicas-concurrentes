@@ -1,63 +1,44 @@
 import monitor.* ;
 import java.util.Random;
-
+// José Carlos Entrena
 class Estanco extends AbstractMonitor{ 
     
     public int mostrador = -1; 
-    boolean hay_elem = false; 
-    private Condition tabaco = makeCondition(); 
-    private Condition cerillas = makeCondition(); 
-    private Condition papel = makeCondition(); 
-    private Condition poner = makeCondition(); 
+    private Condition[] ingredientes = new Condition[3]; 
+    private Condition libre = makeCondition(); 
       
+    public Estanco(){
+        for(int i = 0; i < 3; i++)
+            ingredientes[i] = makeCondition(); 
+    }
 
-    // Invocado por cada fumador, indicando su ingrediente o numero
+    // Invocado por cada fumador, indicando su ingrediente o número
     public void obtenerIngrediente( int miIngrediente ){     
-	enter(); 
-	System.out.println("Entro a coger"); 
-	while (mostrador != miIngrediente) { 
-            switch(miIngrediente) {
-                case 0: papel.await(); 
-                    System.out.println("Cojo Papel");
-                    break; 
-                case 1: tabaco.await(); 
-                    System.out.println("Cojo Tabaco");
-                    break; 
-                case 2: cerillas.await(); 
-                    System.out.println("Cojo Cerillas");
-                    break; 
-           } 
-        }
-         
-        poner.signal(); 
-        hay_elem = false;
+        enter(); 
+        System.out.println("Entro a coger "+miIngrediente); 
+	 
+        if(mostrador != miIngrediente)
+            ingredientes[miIngrediente].await(); 
+
+           
+        System.out.println("Salgo de coger "+miIngrediente);
+        mostrador = -1;
+        libre.signal(); 
         leave(); 
     }
     // Invocado por el estanquero, indicando el ingrediente que pone
     public void ponerIngrediente( int ingrediente ){ 
-        enter();  
-        while (hay_elem) 
-            poner.await();
+        enter();
         mostrador = ingrediente; 
-        hay_elem = true; 
-        switch(ingrediente) {
-            case 0: System.out.println("Pongo papel");
-                papel.signal(); 
-                break; 
-            case 1: System.out.println("Pongo tabaco");
-                tabaco.signal(); 
-                break; 
-            case 2: System.out.println("Pongo cerillas");
-                cerillas.signal();                 
-                break; 
-        }
+        System.out.println("Estanco: coloco " + ingrediente); 
+        ingredientes[mostrador].signal(); 
         leave(); 
     }
     // Invocado por el estanquero
     public void esperarRecogidaIngrediente(){ 
         enter(); 
-        while (hay_elem)
-            poner.await(); 
+        if (mostrador != -1)
+            libre.await(); 
         leave(); 
     }
 }
